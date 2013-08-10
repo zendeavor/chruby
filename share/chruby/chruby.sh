@@ -1,11 +1,6 @@
 chruby_version="0.3.6"
 
-function chruby_die {
-  typeset status=$1; shift
-  printf '%s\n' "${chruby_red}$*${chruby_coff}"
-  return $status
-} >&2
-
+## utility functions
 function chruby_color_set {
   if [[ -t 2 ]]; then
     if tput setaf 0 >/dev/null 2>&1; then
@@ -26,63 +21,6 @@ function chruby_color_set {
   fi
 }
 
-function chruby_preexec_bash_set {
-  typeset -a hook
-  typeset trap=$(trap -p DEBUG)
-  if [[ $1 == -r ]]; then
-    PROMPT_COMMAND=${PROMPT_COMMAND//chruby_auto?}
-    IFS=\' read -ra hook <<<"$trap"
-    IFS=\; read -ra hook <<<"${hook[@]:1:${#hook[@]}-2}"
-    trap "${hook[@]//chruby_auto?}" DEBUG
-    return
-  fi
-  if {
-      [[ $PROMPT_COMMAND == *chruby_auto* ]] ||
-      [[ $(trap -p DEBUG) == *chruby_auto* ]];
-  }; then
-    chruby_preexec_bash_set -r
-  fi
-  if [[ $- == *i* ]]; then
-    IFS=\; read -ra hook <<<"$PROMPT_COMMAND"
-    PROMPT_COMMAND="${hook[@]/%/;} chruby_auto"
-    PROMPT_COMMAND="${PROMPT_COMMAND#;}"
-  else
-    IFS=\' read -ra hook <<<"$trap"
-    IFS=\; read -ra hook <<<"${hook[@]:1:${#hook[@]}-2}"
-    trap "${hook[@]/%/;} chruby_auto" DEBUG
-  fi
-}
-
-function chruby_preexec_zsh_set {
-  typeset -a hook
-  if [[ $1 == -r ]]; then
-    precmd_functions=(${precmd_functions//chruby_auto})
-    preexec_functions=(${preexec_functions//chruby_auto})
-    return
-  fi
-  if {
-    [[ $precmd_functions == *chruby_auto* ]] ||
-    [[ $preexec_functions == *chruby_auto* ]]
-  }; then
-    chruby_preexec_zsh_set -r
-  fi
-  if [[ -o interactive ]]; then
-    precmd_functions+=(chruby_auto)
-  else
-    preexec_functions+=(chruby_auto)
-  fi
-}
-
-function chruby_preexec_set {
-  ## can't rely on $0 or $SHELL
-  # case ${SHELL##*/} in
-  case ${0##*/} in
-    bash) chruby_preexec_bash_set;;
-    zsh) chruby_preexec_zsh_set;;
-    # ?ksh) chruby_preexec_ksh_set;;
-  esac
-}
-
 function chruby_env_set {
   typeset env
   while read -r env; do
@@ -97,7 +35,8 @@ EOR
 )
 }
 
-function chruby_def_set {
+function chruby_default_set {
+  typeset dir
   RUBIES=()
   for dir in "$PREFIX"/opt/rubies/* "$HOME"/.rubies/*; do
     [[ -e $dir && -d $dir/bin ]] && RUBIES+=("$dir")
@@ -108,8 +47,7 @@ function chruby_def_set {
 }
 
 function chruby_reset {
-  typeset msg="System ruby in use!"
-  [[ $RUBY_ROOT == $sys_ruby_root ]] && { chruby_die 3 $msg; return; }
+  [[ $RUBY_ROOT == $sys_ruby_root ]] && return 3
 
   PATH=:$PATH:
   PATH=${PATH//:$RUBY_ROOT\/bin:/:}
@@ -130,10 +68,9 @@ function chruby_reset {
 
 function chruby_use {
   typeset ruby_exe=$1/bin/ruby env
-  RUBY_ROOT=$1
+  RUBY_ROOT=$1 RUBYOPT=${*:2}
+
   chruby_reset
-  shift
-  RUBYOPT=$*
 
   chruby_env_set
 
@@ -156,6 +93,7 @@ function chruby_auto {
   chruby_reset
 }
 
+## user functions
 function chruby {
   typeset match IFS= arg=$1; shift
   case $arg in
@@ -199,8 +137,15 @@ function chruby {
   esac
 }
 
-((UID)) || chruby_die 128 Do not run chruby as root!
+function chruby_preexec_set {
+  case ${0##*/} in
+    bash) chruby_preexec_bash_set;;
+    zsh) chruby_preexec_zsh_set;;
+    ?ksh) chruby_preexec_ksh_set;;
+  esac
+}
 
+## setup
 if (($#)); then
   optstring=:acd
   while getopts $optstring o; do
@@ -214,11 +159,9 @@ fi
 
 ((enable_color)) && chruby_color_set
 ((enable_auto)) && chruby_preexec_set
-((enable_defaults)) && {
-  setopt nullglob; chruby_def_set; setopt nonullglob;
-} 2>/dev/null
+((enable_defaults)) && chruby_default_set
 
-unset ruby_auto_version optstring \
+unset ruby_auto_version optstring o \
   enable_auto enable_color enable_defaults
 export GEM_HOME GEM_PATH \
 	RUBY_ENGINE RUBY_VERSION RUBY_PATCHLEVEL RUBY_ROOT RUBYOPT
