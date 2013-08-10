@@ -34,16 +34,42 @@ function chruby_preexec_bash_set {
     IFS=\' read -ra hook <<<"$trap"
     IFS=\; read -ra hook <<<"${hook[@]:1:${#hook[@]}-2}"
     trap "${hook[@]//chruby_auto?}" DEBUG
+    return
   fi
-  [[ $PROMPT_COMMAND == *chruby_auto* || $(trap -p DEBUG) == *chruby_auto* ]] &&
+  if {
+      [[ $PROMPT_COMMAND == *chruby_auto* ]] ||
+      [[ $(trap -p DEBUG) == *chruby_auto* ]];
+  }; then
     chruby_preexec_bash_set -r
+  fi
   if [[ $- == *i* ]]; then
     IFS=\; read -ra hook <<<"$PROMPT_COMMAND"
     PROMPT_COMMAND="${hook[@]/%/;} chruby_auto"
+    PROMPT_COMMAND="${PROMPT_COMMAND#;}"
   else
     IFS=\' read -ra hook <<<"$trap"
     IFS=\; read -ra hook <<<"${hook[@]:1:${#hook[@]}-2}"
     trap "${hook[@]/%/;} chruby_auto" DEBUG
+  fi
+}
+
+function chruby_preexec_zsh_set {
+  typeset -a hook
+  if [[ $1 == -r ]]; then
+    precmd_functions=(${precmd_functions//chruby_auto})
+    preexec_functions=(${preexec_functions//chruby_auto})
+    return
+  fi
+  if {
+    [[ $precmd_functions == *chruby_auto* ]] ||
+    [[ $preexec_functions == *chruby_auto* ]]
+  }; then
+    chruby_preexec_zsh_set -r
+  fi
+  if [[ -o interactive ]]; then
+    precmd_functions+=(chruby_auto)
+  else
+    preexec_functions+=(chruby_auto)
   fi
 }
 
@@ -52,8 +78,8 @@ function chruby_preexec_set {
   # case ${SHELL##*/} in
   case ${0##*/} in
     bash) chruby_preexec_bash_set;;
-    # zsh) chruby_preexec_zsh_set;;
-    # ksh) chruby_preexec_ksh_set;;
+    zsh) chruby_preexec_zsh_set;;
+    # ?ksh) chruby_preexec_ksh_set;;
   esac
 }
 
@@ -68,16 +94,14 @@ puts "RUBY_VERSION=#{RUBY_VERSION}"
 puts "RUBY_PATCHLEVEL=#{RUBY_PATCHLEVEL}"
 puts "GEM_ROOT=#{Gem.default_dir.inspect}" if defined?(Gem)
 EOR
-	  )
+)
 }
 
 function chruby_def_set {
   RUBIES=()
-  { setopt nullglob; } 2>/dev/null
   for dir in "$PREFIX"/opt/rubies/* "$HOME"/.rubies/*; do
     [[ -e $dir && -d $dir/bin ]] && RUBIES+=("$dir")
   done
-  { setopt nonullglob; } 2>/dev/null
   RUBY_ROOT=$(command -v ruby)
   sys_ruby_root=${RUBY_ROOT%/bin/*}
   chruby_env_set
@@ -190,7 +214,9 @@ fi
 
 ((enable_color)) && chruby_color_set
 ((enable_auto)) && chruby_preexec_set
-((enable_defaults)) && chruby_def_set
+((enable_defaults)) && {
+  setopt nullglob; chruby_def_set; setopt nonullglob;
+} 2>/dev/null
 
 unset ruby_auto_version optstring \
   enable_auto enable_color enable_defaults
