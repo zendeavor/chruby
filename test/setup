@@ -2,7 +2,7 @@
 
 . ./test/helper.sh
 
-function log() {
+log() {
 	if [[ -t 1 ]]; then
 		echo -e "\x1b[1m\x1b[32m>>>\x1b[0m \x1b[1m\x1b[37m$1\x1b[0m"
 	else
@@ -10,7 +10,7 @@ function log() {
 	fi
 }
 
-function error() {
+error() {
 	if [[ -t 1 ]]; then
 		echo -e "\x1b[1m\x1b[31m!!!\x1b[0m \x1b[1m\x1b[37m$1\x1b[0m" >&2
 	else
@@ -18,12 +18,12 @@ function error() {
 	fi
 }
 
-function fail() {
+fail() {
 	error "$1"
 	exit -1
 }
 
-function download() {
+download() {
 	if [[ $(type -t wget) ]]; then
 		wget -c -O "$2" "$1"
 	elif [[ $(type -t curl) ]]; then
@@ -34,7 +34,7 @@ function download() {
 	fi
 }
 
-function detect_system() {
+detect_system() {
   SYSTEM_TYPE="unknown"
   SYSTEM_NAME="unknown"
   SYSTEM_VERSION="unknown"
@@ -163,15 +163,15 @@ detect_system || fail "Cannot auto-detect system type"
 [[ "$SYSTEM_VERSION" == "unknown" ]] && fail "Could not detect system version"
 [[ "$SYSTEM_ARCH" == "unknown"    ]] && fail "Could not detect system arch"
 
-TEST_RUBY_ARCHIVE="$TEST_RUBY_ENGINE-$TEST_RUBY_VERSION-p$TEST_RUBY_PATCHLEVEL.tar.bz2"
-TEST_RUBY_URL="http://rvm.io/binaries/$SYSTEM_NAME/$SYSTEM_VERSION/$SYSTEM_ARCH/$TEST_RUBY_ARCHIVE"
-TEST_RUBY_ROOT="$TEST_RUBY_ENGINE-$TEST_RUBY_VERSION-p$TEST_RUBY_PATCHLEVEL"
+TEST_RUBY_ARCHIVE="$test_ruby_engine-$test_ruby_version-p$test_ruby_patchlevel.tar.bz2"
+TEST_RUBY_URL="http://rvm.io/binaries/$SYSTEM_NAME/$SYSTEM_VERSION/$SYSTEM_ARCH/$test_ruby_archive"
+tEST_RUBY_ROOT="$test_ruby_engine-$test_ruby_version-p$test_ruby_patchlevel"
 
 mkdir -p test/rubies
 cd test/rubies
 
-log "Downloading $TEST_RUBY_URL ..."
-download "$TEST_RUBY_URL" "$TEST_RUBY_ARCHIVE" || fail "Download failed"
+log "Downloading $test_ruby_url ..."
+download "$test_ruby_url" "$test_ruby_archive" || fail "Download failed"
 
-log "Unpacking $TEST_RUBY_ARCHIVE ..."
-tar -xjf "$TEST_RUBY_ARCHIVE" || fail "Unpacking failed"
+log "Unpacking $test_ruby_archive ..."
+tar -xjf "$test_ruby_archive" || fail "Unpacking failed"

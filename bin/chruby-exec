@@ -1,36 +1,39 @@
 #!/usr/bin/env bash
 
-source "$(dirname $0)/../share/chruby/chruby.sh"
+source "$PWD"/share/chruby/chruby.sh
 
-case "$1" in
+case $1 in
 	-h|--help)
 		echo "usage: chruby-exec RUBY [RUBYOPTS] -- COMMAND"
 		exit
 		;;
 	-V|--version)
-		echo "chruby version $CHRUBY_VERSION"
+		echo "chruby version $chruby_version"
 		exit
 		;;
 esac
 
-if [[ $# -eq 0 ]]; then
+if ((! $# )); then
 	echo "chruby-exec: RUBY and COMMAND required" >&2
 	exit 1
 fi
 
 argv=()
 
-for arg in $@; do
+for arg in "$@"; do
 	shift
 
-	if [[ "$arg" == "--" ]]; then break
-	else                          argv+=($arg)
+	if [[ $arg == "--" ]]; then break
+	else                          argv+=("$arg")
 	fi
 done
 
-if [[ $# -eq 0 ]]; then
+if ((! $# )); then
 	echo "chruby-exec: COMMAND required" >&2
 	exit 1
 fi
 
-exec $SHELL -i -l -c "chruby $argv && $*"
+exec $SHELL -i -l -c 'for a; do
+			shift; [[ $a == -- ]] && break
+			argv+=("$a")
+		      done; chruby ${argv[@]} && "$@"' _ "${argv[@]}" -- "$@"
