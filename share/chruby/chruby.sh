@@ -48,12 +48,12 @@ function chruby_preexec_bash_set {
 }
 
 function chruby_preexec_set {
-  ## can't rely on $0
-  # case ${0##*/} in
-  case ${SHELL##*/} in
-    bash) chruby_preexec_bash_set $1 ;;
-    zsh) chruby_preexec_zsh_set $1 ;;
-    *) chruby_preexec_ksh_set $1 ;;
+  ## can't rely on $0 or $SHELL
+  # case ${SHELL##*/} in
+  case ${0##*/} in
+    bash) chruby_preexec_bash_set;;
+    # zsh) chruby_preexec_zsh_set;;
+    # ksh) chruby_preexec_ksh_set;;
   esac
 }
 
