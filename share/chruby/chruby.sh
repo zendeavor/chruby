@@ -169,6 +169,6 @@ fi
 
 unset ruby_auto_version optstring o \
   enable_auto enable_color enable_defaults
-export GEM_HOME GEM_PATH \
+export GEM_HOME GEM_PATH GEM_ROOT \
 	RUBY_ENGINE RUBY_VERSION RUBY_PATCHLEVEL RUBY_ROOT RUBYOPT
 
