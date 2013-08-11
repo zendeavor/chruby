@@ -1,4 +1,4 @@
-function chruby_preexec_bash_set {
+function chruby_preexec_set {
   typeset -a hook
   typeset trap=$(trap -p DEBUG)
   if [[ $1 == -r ]]; then
@@ -24,6 +24,5 @@ function chruby_preexec_bash_set {
     trap "${hook[@]/%/;} chruby_auto" DEBUG
   fi
 }
-chruby_sh=bash
 . /etc/profile.d/chruby.sh
 

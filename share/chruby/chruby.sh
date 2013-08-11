@@ -151,10 +151,6 @@ function chruby {
   esac
 }
 
-function chruby_preexec_set {
-  chruby_preexec_${chruby_sh}_set $1
-}
-
 ## setup
 if (($#)); then
   optstring=:acd

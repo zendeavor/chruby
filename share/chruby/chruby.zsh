@@ -1,4 +1,4 @@
-function chruby_preexec_zsh_set {
+function chruby_preexec_set {
   typeset -a hook
   if [[ $1 == -r ]]; then
     precmd_functions=(${precmd_functions//chruby_auto})
@@ -17,6 +17,5 @@ function chruby_preexec_zsh_set {
     preexec_functions+=(chruby_auto)
   fi
 }
-chruby_sh=zsh
 . /etc/profile.d/chruby.sh
 
