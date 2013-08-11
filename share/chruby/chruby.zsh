@@ -17,6 +17,6 @@ function chruby_preexec_zsh_set {
     preexec_functions+=(chruby_auto)
   fi
 }
-
+chruby_sh=zsh
 . /etc/profile.d/chruby.sh
 

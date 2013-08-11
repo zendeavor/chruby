@@ -21,8 +21,39 @@ function chruby_color_set {
   fi
 }
 
+function chruby_env_path_set {
+  typeset -a paths
+  typeset n IFS=:
+  while read -r paths[n++]; do :; done <<<"$PATH"
+  paths=("${paths[@]//$RUBY_ROOT\/bin}")
+  paths=("${paths[@]//$GEM_HOME\/bin}")
+  PATH=${paths[*]}
+
+
+
+
+  PATH=:$PATH:
+  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
+  PATH=${PATH//:$GEM_HOME\/bin:/:}
+  PATH=${PATH#:}
+  PATH=${PATH%:}
+  PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
+}
+
+function chruby_env_gempath_set {
+  GEM_HOME=$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION
+  GEM_PATH=:$GEM_PATH:
+  GEM_PATH=${GEM_PATH//:$GEM_HOME:/:}
+  GEM_PATH=${GEM_PATH//:$GEM_ROOT:/:}
+  GEM_PATH=${GEM_PATH#:}
+  GEM_PATH=${GEM_PATH%:}
+  GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
+}
+
 function chruby_env_set {
-  typeset env
+  typeset env ruby_opt=${*:2}
+  RUBY_ROOT=${1:-$sys_ruby_root}
+  RUBYOPT=${ruby_opt:-$RUBYOPT}
   while read -r env; do
     typeset "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
@@ -33,82 +64,65 @@ puts "RUBY_PATCHLEVEL=#{RUBY_PATCHLEVEL}"
 puts "GEM_ROOT=#{Gem.default_dir.inspect}" if defined?(Gem)
 EOR
 )
-}
-
-function chruby_default_set {
-  typeset dir
-  RUBIES=()
-  for dir in "$PREFIX"/opt/rubies/* "$HOME"/.rubies/*; do
-    [[ -e $dir && -d $dir/bin ]] && RUBIES+=("$dir")
-  done
-  RUBY_ROOT=$(command -v ruby)
-  sys_ruby_root=${RUBY_ROOT%/bin/*}
-  chruby_env_set
-}
-
-function chruby_reset {
-  [[ $RUBY_ROOT == $sys_ruby_root ]] && return 3
-
-  PATH=:$PATH:
-  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
-  PATH=${PATH//:$GEM_HOME\/bin:/:}
-  PATH=${PATH//:$GEM_HOME\/bin:/:}
-  PATH=${PATH#:}
-  PATH=${PATH%:}
-
-  GEM_PATH=:$GEM_PATH:
-  GEM_PATH=${GEM_PATH//:$GEM_HOME:/:}
-  GEM_PATH=${GEM_PATH//:$GEM_ROOT:/:}
-  GEM_PATH=${GEM_PATH#:}
-  GEM_PATH=${GEM_PATH%:}
-
-  chruby_env_set
+  chruby_env_gempath_set
+  chruby_env_path_set
   hash -r
 }
 
-function chruby_use {
-  typeset ruby_exe=$1/bin/ruby env
-  RUBY_ROOT=$1 RUBYOPT=${*:2}
+function chruby_default_rubies_set {
+  typeset dir
+  RUBIES=()
+  for dir in "$PREFIX"/opt/rubies/* "$HOME"/.rubies/*; do
+    [[ -e $dir && -x $dir/bin/ruby ]] && RUBIES+=("$dir")
+  done
+}
 
-  chruby_reset
-
+function chruby_default_set {
+  RUBY_ROOT=$(command -v ruby)
+  RUBY_ROOT=${RUBY_ROOT%/bin/*}
+  sys_ruby_root=$RUBY_ROOT
+  ((${#RUBIES[@]})) || chruby_default_rubies_set
   chruby_env_set
+}
 
-  GEM_HOME=$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION
-  GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
-  PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
+function chruby_use {
+  typeset ruby_opt=${*:2}
+  RUBYOPT=${ruby_opt:-$RUBYOPT}
+  chruby_env_set
 }
 
 function chruby_auto {
-  typeset dir=$PWD version
-  until [[ $dir/ == / ]]; do
-    if { IFS= read -r version <"$dir"/.ruby-version; } 2>/dev/null; then
-      [[ $version == $ruby_auto_version ]] && break
-	ruby_auto_version=$version
-	chruby "$version"
-	return
+  typeset dir stop ver
+  [[ ${dir:=$PWD} == ${stop:=${HOME%/*}}* ]] || return
+  while [[ -n $dir ]]; do
+    if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
+      chruby "$ver"
+      break
     fi
     dir=${dir%/*}
   done
-  chruby_reset
+  chruby_env_set
 }
 
 ## user functions
 function chruby {
-  typeset match IFS= arg=$1; shift
+  typeset match msg colored IFS= arg=$1; shift
   case $arg in
     -h|--help)
-      chruby_die 0 "usage: chruby [RUBY|VERSION|system] [RUBY_OPTS]"
+      printf '%s\n' "usage: chruby [RUBY|VERSION|system] [RUBY_OPTS]"
+      return
     ;;
     -V|--version)
-      chruby_die 0 chruby version: $chruby_version
+      printf '%s\n' "chruby version: $chruby_version"
+      return
     ;;
-    "")
-      colored=${chruby_green}$RUBY_ROOT${chruby_off}
+    '')
+      colored=${chruby_blue}*${chruby_coff}
+      colored=" ${colored}${chruby_green}$RUBY_ROOT${chruby_off}"
       printf '%s\n' "${RUBIES[@]/#$RUBY_ROOT/$colored}"
     ;;
     system)
-      chruby_reset
+      chruby_default_set
     ;;
     *)
       msg="Unknown ruby: $arg"
@@ -118,7 +132,7 @@ function chruby {
       # /home/me/RUBIES/ruby-ver-p420 /home/me/RUBIES/ruby-
       begin_tmp=${tmp%$arg*}
       ## ensure there was a match or die
-      ((${#tmp} >= ${#begin_tmp})) || { chruby_die 2 $msg; return; }
+      ((${#tmp} >= ${#begin_tmp})) || { printf '%s\n' "$msg"; return 2; }
       ## yank out the leading junk
       # home/me/RUBIES/ruby-
       begin=${begin_tmp##* /}
@@ -132,17 +146,13 @@ function chruby {
       # /home/me/RUBIES/ruby-1.9.3-p448
       match=/${begin}${arg}${end}
 
-      chruby_use "$match" "$@" || chruby_die 2 $msg
+      chruby_use "$match" "$@" || { printf '%s\n' "$msg"; return 2; }
     ;;
   esac
 }
 
 function chruby_preexec_set {
-  case ${0##*/} in
-    bash) chruby_preexec_bash_set;;
-    zsh) chruby_preexec_zsh_set;;
-    ?ksh) chruby_preexec_ksh_set;;
-  esac
+  chruby_preexec_${chruby_sh}_set $1
 }
 
 ## setup

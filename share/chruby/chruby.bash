@@ -10,7 +10,7 @@ function chruby_preexec_bash_set {
   fi
   if {
       [[ $PROMPT_COMMAND == *chruby_auto* ]] ||
-      [[ $(trap -p DEBUG) == *chruby_auto* ]];
+      [[ $trap == *chruby_auto* ]];
   }; then
     chruby_preexec_bash_set -r
   fi
@@ -24,6 +24,6 @@ function chruby_preexec_bash_set {
     trap "${hook[@]/%/;} chruby_auto" DEBUG
   fi
 }
-
+chruby_sh=bash
 . /etc/profile.d/chruby.sh
 
