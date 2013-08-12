@@ -44,13 +44,21 @@ function chruby_env_set {
   chruby_env_path_clean
   chruby_env_gempath_clean
   while IFS= read -r env; do
-    typeset -x "$env"
+    export "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
 begin; require 'rubygems'; rescue LoadError; end
-puts "RUBY_ENGINE=#{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'}"
-puts "RUBY_VERSION=#{RUBY_VERSION}"
-puts "RUBY_PATCHLEVEL=#{RUBY_PATCHLEVEL}"
-puts "GEM_ROOT=#{Gem.default_dir.inspect}" if defined?(Gem)
+eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
+ver = RUBY_VERSION
+gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
+c = 0
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{eng}"
+ver.split('.').each { |v|
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{v}"
+}
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PATCHLEVEL}"
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_REVISION}"
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PLATFORM}"
+puts "GEM_ROOT=#{gems}"
 EOR
 )
   GEM_HOME=$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION
@@ -61,9 +69,9 @@ EOR
 
 function chruby_default_rubies_set {
   typeset dir
-  RUBIES=()
-  for dir in "$PREFIX"/opt/rubies/* "$HOME"/.rubies/*; do
-    [[ -e $dir && -x $dir/bin/ruby ]] && RUBIES+=("$dir")
+  rubies=()
+  for dir in "$rubiesdir"/opt/rubies/* "$HOME"/.rubies/*; do
+    [[ -e $dir && -x $dir/bin/ruby ]] && rubies+=("$dir")
   done
 }
 
@@ -71,13 +79,6 @@ function chruby_default_set {
   RUBY_ROOT=$(command -v ruby)
   RUBY_ROOT=${RUBY_ROOT%/bin/*}
   sys_ruby_root=$RUBY_ROOT
-  ((${#RUBIES[@]})) || chruby_default_rubies_set
-  chruby_env_set
-}
-
-function chruby_use {
-  typeset ruby_opt=${*:2}
-  RUBYOPT=${ruby_opt:-$RUBYOPT}
   chruby_env_set
 }
 
@@ -109,7 +110,7 @@ function chruby {
     '')
       colored=${chruby_blue}*\ ${chruby_coff}
       colored=${colored}${chruby_green}$RUBY_ROOT${chruby_off}
-      printf '%s\n' "${RUBIES[@]/#$RUBY_ROOT/$colored}"
+      printf '%s\n' "${rubies[@]/#$RUBY_ROOT/$colored}"
     ;;
     system)
       chruby_default_set
@@ -117,14 +118,14 @@ function chruby {
     *)
       msg="Unknown ruby: $arg"
       ## store in tmp var: collapsing into scalar
-      tmp=${RUBIES[*]/#/ }
+      tmp=${rubies[*]/#/ }
       ## cut from right: from $arg to end
-      # /home/me/RUBIES/ruby-ver-p420 /home/me/RUBIES/ruby-
+      # /home/me/rubies/ruby-ver-p420 /home/me/rubies/ruby-
       begin_tmp=${tmp%$arg*}
       ## ensure there was a match or die
       ((${#tmp} >= ${#begin_tmp})) || { printf '%s\n' "$msg"; return 2; }
       ## yank out the leading junk
-      # home/me/RUBIES/ruby-
+      # home/me/rubies/ruby-
       begin=${begin_tmp##* /}
       ## cut from left: from begin to $arg
       # -p448
@@ -133,7 +134,7 @@ function chruby {
       ## contain *all* of the other rubies. so strip those.
       end=${end_tmp%% /*}
       ## rebuild pieces $begin + $arg + $end
-      # /home/me/RUBIES/ruby-1.9.3-p448
+      # /home/me/rubies/ruby-1.9.3-p448
       match=/${begin}${arg}${end}
 
       chruby_use "$match" "$@" || { printf '%s\n' "$msg"; return 2; }
@@ -149,16 +150,17 @@ if (($#)); then
       a) enable_auto=1;;
       c) enable_color=1;;
       d) enable_defaults=1;;
+      r) enable_rubies=1;;
     esac
   done
 fi
 
 ((enable_defaults)) && chruby_default_set
+((enable_rubies)) && chruby_default_rubies_set
 ((enable_color)) && chruby_color_set
 ((enable_auto)) && chruby_preexec_set
 
 unset optstring o \
-  enable_auto enable_color enable_defaults
-export GEM_HOME GEM_PATH GEM_ROOT \
-	RUBY_ENGINE RUBY_VERSION RUBY_PATCHLEVEL RUBY_ROOT RUBYOPT
+  enable_auto enable_color enable_defaults enable_rubies
+export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT
 
