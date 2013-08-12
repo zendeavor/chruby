@@ -21,41 +21,30 @@ function chruby_color_set {
   fi
 }
 
-function chruby_env_path_set {
-  typeset -a paths
-  typeset n IFS=:
-  while read -r paths[n++]; do :; done <<<"$PATH"
-  paths=("${paths[@]//$RUBY_ROOT\/bin}")
-  paths=("${paths[@]//$GEM_HOME\/bin}")
-  PATH=${paths[*]}
-
-
-
-
+function chruby_env_path_clean {
   PATH=:$PATH:
-  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
-  PATH=${PATH//:$GEM_HOME\/bin:/:}
+  PATH=${PATH//:$GEM_HOME:/:}
+  PATH=${PATH//:$GEM_ROOT:/:}
   PATH=${PATH#:}
   PATH=${PATH%:}
-  PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
 }
 
-function chruby_env_gempath_set {
-  GEM_HOME=$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION
+function chruby_env_gempath_clean {
   GEM_PATH=:$GEM_PATH:
   GEM_PATH=${GEM_PATH//:$GEM_HOME:/:}
   GEM_PATH=${GEM_PATH//:$GEM_ROOT:/:}
   GEM_PATH=${GEM_PATH#:}
   GEM_PATH=${GEM_PATH%:}
-  GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
 }
 
 function chruby_env_set {
   typeset env ruby_opt=${*:2}
   RUBY_ROOT=${1:-$sys_ruby_root}
   RUBYOPT=${ruby_opt:-$RUBYOPT}
-  while read -r env; do
-    typeset "$env"
+  chruby_env_path_clean
+  chruby_env_gempath_clean
+  while IFS= read -r env; do
+    typeset -x "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
 begin; require 'rubygems'; rescue LoadError; end
 puts "RUBY_ENGINE=#{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'}"
@@ -64,8 +53,9 @@ puts "RUBY_PATCHLEVEL=#{RUBY_PATCHLEVEL}"
 puts "GEM_ROOT=#{Gem.default_dir.inspect}" if defined?(Gem)
 EOR
 )
-  chruby_env_gempath_set
-  chruby_env_path_set
+  GEM_HOME=$HOME/.gem/$RUBY_ENGINE/$RUBY_VERSION
+  GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
+  PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
   hash -r
 }
 
@@ -94,7 +84,7 @@ function chruby_use {
 function chruby_auto {
   typeset dir stop ver
   [[ ${dir:=$PWD} == ${stop:=${HOME%/*}}* ]] || return
-  while [[ -n $dir ]]; do
+  until [[ $dir == $stop ]]; do
     if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
       chruby "$ver"
       break
@@ -117,8 +107,8 @@ function chruby {
       return
     ;;
     '')
-      colored=${chruby_blue}*${chruby_coff}
-      colored=" ${colored}${chruby_green}$RUBY_ROOT${chruby_off}"
+      colored=${chruby_blue}*\ ${chruby_coff}
+      colored=${colored}${chruby_green}$RUBY_ROOT${chruby_off}
       printf '%s\n' "${RUBIES[@]/#$RUBY_ROOT/$colored}"
     ;;
     system)
@@ -163,11 +153,11 @@ if (($#)); then
   done
 fi
 
+((enable_defaults)) && chruby_default_set
 ((enable_color)) && chruby_color_set
 ((enable_auto)) && chruby_preexec_set
-((enable_defaults)) && chruby_default_set
 
-unset ruby_auto_version optstring o \
+unset optstring o \
   enable_auto enable_color enable_defaults
 export GEM_HOME GEM_PATH GEM_ROOT \
 	RUBY_ENGINE RUBY_VERSION RUBY_PATCHLEVEL RUBY_ROOT RUBYOPT
