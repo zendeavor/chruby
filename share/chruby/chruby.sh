@@ -47,9 +47,10 @@ function chruby_env_set {
     export "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
 begin; require 'rubygems'; rescue LoadError; end
-eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
-ver = RUBY_VERSION
-gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
+ver, eng, gems =
+RUBY_VERSION
+defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
+defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
 c = 0
 puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{eng}"
 ver.split('.').each { |v|
