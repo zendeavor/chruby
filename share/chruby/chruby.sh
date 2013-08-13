@@ -4,12 +4,12 @@ chruby_version="0.3.6"
 function chruby_color_set {
   if [[ -t 2 ]]; then
     if tput setaf 0 >/dev/null 2>&1; then
-      chruby_coff=$(tput sgr0)
-      chruby_bold=$(tput bold)
-      chruby_red=${chruby_bold}$(tput setaf 1)
-      chruby_green=${chruby_bold}$(tput setaf 2)
-      chruby_yellow=${chruby_bold}$(tput setaf 3)
-      chruby_blue=${chruby_bold}$(tput setaf 4)
+      chruby_coff="$(tput sgr0)"
+      chruby_bold="$(tput bold)"
+      chruby_red="${chruby_bold}$(tput setaf 1)"
+      chruby_green="${chruby_bold}$(tput setaf 2)"
+      chruby_yellow="${chruby_bold}$(tput setaf 3)"
+      chruby_blue="${chruby_bold}$(tput setaf 4)"
     else
       chruby_coff="\e[1;0m"
       chruby_bold="\e[1;1m"
@@ -23,8 +23,9 @@ function chruby_color_set {
 
 function chruby_env_path_clean {
   PATH=:$PATH:
-  PATH=${PATH//:$GEM_HOME:/:}
-  PATH=${PATH//:$GEM_ROOT:/:}
+  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
+  PATH=${PATH//:$GEM_HOME\/bin:/:}
+  PATH=${PATH//:$GEM_ROOT\/bin:/:}
   PATH=${PATH#:}
   PATH=${PATH%:}
 }
@@ -38,11 +39,11 @@ function chruby_env_gempath_clean {
 }
 
 function chruby_env_set {
-  typeset env ruby_opt=${*:2}
-  RUBY_ROOT=${1:-$sys_ruby_root}
-  RUBYOPT=${ruby_opt:-$RUBYOPT}
+  typeset env new_ruby_root=$1 ruby_opt=${*:2}
   chruby_env_path_clean
   chruby_env_gempath_clean
+  RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
+  RUBYOPT=${ruby_opt:-$RUBYOPT}
   while IFS= read -r env; do
     export "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
@@ -77,15 +78,14 @@ function chruby_default_rubies_set {
 }
 
 function chruby_default_set {
-  RUBY_ROOT=$(command -v ruby)
-  RUBY_ROOT=${RUBY_ROOT%/bin/*}
-  sys_ruby_root=$RUBY_ROOT
+  sys_ruby_root=$(PATH=/usr/local/bin:/usr/bin:/bin command -v ruby)
+  sys_ruby_root=${sys_ruby_root%/bin/*}
   chruby_env_set
 }
 
 function chruby_auto {
-  typeset dir stop ver
-  [[ ${dir:=$PWD} == ${stop:=${HOME%/*}}* ]] || return
+  typeset ver dir=$PWD stop=${HOME%/*}
+  [[ $dir == $stop* ]] || return
   until [[ $dir == $stop ]]; do
     if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
       chruby "$ver"
@@ -98,26 +98,31 @@ function chruby_auto {
 
 ## user functions
 function chruby {
-  typeset match msg colored IFS= arg=$1; shift
-  case $arg in
-    -h|--help)
-      printf '%s\n' "usage: chruby [RUBY|VERSION|system] [RUBY_OPTS]"
-      return
-    ;;
-    -V|--version)
-      printf '%s\n' "chruby version: $chruby_version"
-      return
-    ;;
+  typeset match msg colored optstring=:hV
+  [[ $1 == --* ]] && set -- "${1#-}" "${@:2}"
+  if getopts $optstring o; then
+    case $o in
+      h)
+	printf '%s\n' "usage: chruby [RUBY|VERSION|system] [RUBY_OPTS]"
+	return
+      ;;
+      V)
+	printf '%s\n' "chruby version: $chruby_version"
+	return
+      ;;
+    esac
+  fi
+  case $1 in
     '')
-      colored=${chruby_blue}*\ ${chruby_coff}
-      colored=${colored}${chruby_green}$RUBY_ROOT${chruby_off}
+      colored="${chruby_blue}* ${chruby_coff}"
+      colored="${colored}${chruby_green}$RUBY_ROOT${chruby_off}"
       printf '%s\n' "${rubies[@]/#$RUBY_ROOT/$colored}"
     ;;
     system)
       chruby_default_set
     ;;
     *)
-      msg="Unknown ruby: $arg"
+      msg="Unknown ruby: $1"
       ## store in tmp var: collapsing into scalar
       tmp=${rubies[*]/#/ }
       ## cut from right: from $arg to end
@@ -138,7 +143,7 @@ function chruby {
       # /home/me/rubies/ruby-1.9.3-p448
       match=/${begin}${arg}${end}
 
-      chruby_use "$match" "$@" || { printf '%s\n' "$msg"; return 2; }
+      chruby_env_set "$match" "${@:2}" || { printf '%s\n' "$msg"; return 2; }
     ;;
   esac
 }
