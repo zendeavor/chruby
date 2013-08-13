@@ -23,9 +23,9 @@ function chruby_color_set {
 
 function chruby_env_path_clean {
   PATH=:$PATH:
-  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
-  PATH=${PATH//:$GEM_HOME\/bin:/:}
-  PATH=${PATH//:$GEM_ROOT\/bin:/:}
+  PATH=${PATH//:$RUBY_ROOT?bin:/:}
+  PATH=${PATH//:$GEM_HOME?bin:/:}
+  PATH=${PATH//:$GEM_ROOT?bin:/:}
   PATH=${PATH#:}
   PATH=${PATH%:}
 }
@@ -72,7 +72,7 @@ EOR
 function chruby_default_rubies_set {
   typeset dir
   rubies=()
-  for dir in "$rubiesdir"/opt/rubies/* "$HOME"/.rubies/*; do
+  for dir in "$RUBY_PREFIX"/* "$HOME"/.rubies/*; do
     [[ -e $dir && -x $dir/bin/ruby ]] && rubies+=("$dir")
   done
 }
@@ -97,7 +97,7 @@ function chruby_auto {
 
 ## user functions
 function chruby {
-  typeset match msg colored optstring=:hV
+  typeset match msg colored optstring=:hV rb=${rubies[*]}
   [[ $1 == --* ]] && set -- "${1#-}" "${@:2}"
   if getopts $optstring o; then
     case $o in
@@ -121,28 +121,16 @@ function chruby {
       chruby_default_set
     ;;
     *)
-      msg="Unknown ruby: $1"
-      ## store in tmp var: collapsing into scalar
-      tmp=${rubies[*]/#/ }
-      ## cut from right: from $arg to end
-      #  /home/me/rubies/ruby-ver-p420  /home/me/rubies/ruby-
-      begin_tmp=${tmp%$arg*}
-      ## ensure there was a match or die
-      ((${#tmp} >= ${#begin_tmp})) || { printf '%s\n' "$msg"; return 2; }
-      ## yank out the leading junk
-      # home/me/rubies/ruby-
-      begin=${begin_tmp##* /}
-      ## cut from left: from begin to $arg
-      # -p448
-      end_tmp=${tmp##*$arg}
-      ## if $arg was the trailing substring of a ruby dir, $end_tmp will
-      ## contain *all* of the other rubies. so strip those.
-      end=${end_tmp%% /*}
-      ## rebuild pieces $begin + $arg + $end
-      # /home/me/rubies/ruby-1.9.3-p448
-      match=/${begin}${arg}${end}
+      while ((rb-- >= 0)); do
+	[[ ${rubies[rb]} == *$1* ]] && { match=${rubies[rb]}; break; }
+      done
+      if [[ -n $match ]]; then
+	chruby_env_set "$match" "${@:2}"
+      else
+	printf '%s\n' "$msg"
+	return 2
+      fi
 
-      chruby_env_set "$match" "${@:2}" || { printf '%s\n' "$msg"; return 2; }
     ;;
   esac
 }
@@ -167,5 +155,5 @@ fi
 
 unset optstring o \
   enable_auto enable_color enable_defaults enable_rubies
-export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT
+export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT RUBY_PREFIX
 
