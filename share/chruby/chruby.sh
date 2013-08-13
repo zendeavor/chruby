@@ -4,12 +4,12 @@ chruby_version="0.3.6"
 function chruby_color_set {
   if [[ -t 2 ]]; then
     if tput setaf 0 >/dev/null 2>&1; then
-      chruby_coff="$(tput sgr0)"
-      chruby_bold="$(tput bold)"
-      chruby_red="${chruby_bold}$(tput setaf 1)"
-      chruby_green="${chruby_bold}$(tput setaf 2)"
-      chruby_yellow="${chruby_bold}$(tput setaf 3)"
-      chruby_blue="${chruby_bold}$(tput setaf 4)"
+      chruby_coff=$(tput sgr0)
+      chruby_bold=$(tput bold)
+      chruby_red=${chruby_bold}$(tput setaf 1)
+      chruby_green=${chruby_bold}$(tput setaf 2)
+      chruby_yellow=${chruby_bold}$(tput setaf 3)
+      chruby_blue=${chruby_bold}$(tput setaf 4)
     else
       chruby_coff="\e[1;0m"
       chruby_bold="\e[1;1m"
@@ -80,7 +80,7 @@ function chruby_default_rubies_set {
 function chruby_default_set {
   sys_ruby_root=$(PATH=/usr/local/bin:/usr/bin:/bin command -v ruby)
   sys_ruby_root=${sys_ruby_root%/bin/*}
-  chruby_env_set
+  chruby_env_set "$sys_ruby_root"
 }
 
 function chruby_auto {
@@ -93,7 +93,6 @@ function chruby_auto {
     fi
     dir=${dir%/*}
   done
-  chruby_env_set
 }
 
 ## user functions
@@ -114,8 +113,8 @@ function chruby {
   fi
   case $1 in
     '')
-      colored="${chruby_blue}* ${chruby_coff}"
-      colored="${colored}${chruby_green}$RUBY_ROOT${chruby_off}"
+      colored=${chruby_blue}*\ ${chruby_coff}
+      colored=${colored}${chruby_green}$RUBY_ROOT${chruby_off}
       printf '%s\n' "${rubies[@]/#$RUBY_ROOT/$colored}"
     ;;
     system)
@@ -126,7 +125,7 @@ function chruby {
       ## store in tmp var: collapsing into scalar
       tmp=${rubies[*]/#/ }
       ## cut from right: from $arg to end
-      # /home/me/rubies/ruby-ver-p420 /home/me/rubies/ruby-
+      #  /home/me/rubies/ruby-ver-p420  /home/me/rubies/ruby-
       begin_tmp=${tmp%$arg*}
       ## ensure there was a match or die
       ((${#tmp} >= ${#begin_tmp})) || { printf '%s\n' "$msg"; return 2; }
