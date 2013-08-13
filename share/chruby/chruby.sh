@@ -128,7 +128,7 @@ function chruby {
       if [[ -n $match ]]; then
 	chruby_set_env "$match" "${@:2}"
       else
-	printf '%s\n' "No ruby found for '$1'"
+	printf '%s\n' "No ruby found for '$1'" >&2
 	return 2
       fi
 
