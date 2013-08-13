@@ -24,5 +24,6 @@ function chruby_set_preexec {
     trap "${hook[@]/%/;} chruby_auto" DEBUG
   fi
 }
+shopt -s extglob
 . /etc/profile.d/chruby.sh
 

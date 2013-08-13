@@ -19,7 +19,7 @@ function chrubylib_set_color {
   fi
 } # 1}}}
 
-# {{{2 semi-sanitize paths
+# {{{ semi-sanitize paths
 function chrubylib_clean_env_path {
   PATH=:$PATH:
   PATH=${PATH//:$RUBY_ROOT\/bin:/:}
@@ -35,9 +35,9 @@ function chrubylib_clean_env_gempath {
   GEM_PATH=${GEM_PATH//:$GEM_ROOT:/:}
   GEM_PATH=${GEM_PATH#:}
   GEM_PATH=${GEM_PATH%:}
-} # 2}}}
+} # }}}
 
-# {{{3 set some reasonable defaults
+# {{{ set some reasonable defaults
 function chrubylib_set_default_rubies {
   typeset dir
   rubies=()
@@ -50,9 +50,9 @@ function chrubylib_set_default {
   sys_ruby_root=$(PATH=/usr/local/bin:/usr/bin:/bin command -v ruby)
   sys_ruby_root=${sys_ruby_root%/bin/*}
   chrubylib_set_env "$sys_rubyroot"
-} # 3}}}
+} # }}}
 
-# {{{4 worker for $SHELL_set_preexec functions
+# {{{ worker for $SHELL_set_preexec functions
 function chruby_auto {
   typeset ver dir=${1:-$PWD} stop=${HOME%/*}
   [[ $dir == $stop* ]] || return
@@ -63,9 +63,9 @@ function chruby_auto {
     fi
     dir=${dir%/*}
   done
-} # 4}}}
+} # }}}
 
-# {{{5 workhorse; sets up the whole environment
+# {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
   typeset env new_ruby_root=${1%/bin/*} ruby_opt=${*:2}
   chrubylib_clean_env_path
@@ -88,9 +88,9 @@ EOR
   GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
   PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
   hash -r
-} # 5}}}
+} # }}}
 
-# {{{6 infect the shell environment
+# {{{ infect the shell environment
 if (($#)); then
   optstring=:acdr
   while getopts $optstring o; do
@@ -110,6 +110,6 @@ fi
 
 unset optstring o enable_auto enable_color enable_defaults enable_rubies
 export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT
-# 6}}}
+# }}}
 
-# vim: ft=sh sts=2 sw=2 foldmethod=marker
+# vim: ft=sh sts=2 sw=2 fdm=marker
