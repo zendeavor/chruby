@@ -44,22 +44,16 @@ function chruby_set_env {
   chruby_clean_env_gempath
   RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
   RUBYOPT=${ruby_opt:-$RUBYOPT}
+  { setopt ksharrays; } 2>/dev/null
   while IFS= read -r env; do
     export "$env"
   done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
 begin; require 'rubygems'; rescue LoadError; end
-ver, eng, gems =
-RUBY_VERSION,
-defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby',
-defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
-c = 0
-ver.split('.').each { |v|
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{v}"
-}
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PATCHLEVEL}"
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_REVISION}"
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{eng}"
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PLATFORM}"
+eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
+gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
+(RUBY_VERSION.split('.') +
+[RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
+).each_with_index { |v, i| puts "RUBY_VERSINFO[#{i}]=#{v}" }
 puts "GEM_ROOT=#{gems}"
 EOR
 )
