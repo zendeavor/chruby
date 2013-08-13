@@ -1,3 +1,4 @@
+#!/bin/sh # just to make github hilite for now
 # {{{1 safely set up some colors or fallback on raw escapes
 function chrubylib_set_color {
   if [[ -t 2 ]]; then
