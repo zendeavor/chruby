@@ -23,9 +23,9 @@ function chruby_set_color {
 
 function chruby_clean_env_path {
   PATH=:$PATH:
-  PATH=${PATH//:$RUBY_ROOT?bin:/:}
-  PATH=${PATH//:$GEM_HOME?bin:/:}
-  PATH=${PATH//:$GEM_ROOT?bin:/:}
+  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
+  PATH=${PATH//:$GEM_HOME\/bin:/:}
+  PATH=${PATH//:$GEM_ROOT\/bin:/:}
   PATH=${PATH#:}
   PATH=${PATH%:}
 }
