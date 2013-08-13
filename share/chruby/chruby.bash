@@ -1,4 +1,4 @@
-function chruby_preexec_set {
+function chruby_set_preexec {
   typeset hook=()
   typeset trap=$(trap -p DEBUG)
   if [[ $1 == -r ]]; then

@@ -1,4 +1,4 @@
-function chruby_preexec_set {
+function chruby_set_preexec {
   typeset hook=()
   if [[ $1 == -r ]]; then
     precmd_functions=(${precmd_functions//chruby_auto})
