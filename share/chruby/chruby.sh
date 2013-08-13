@@ -52,12 +52,12 @@ RUBY_VERSION,
 defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby',
 defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
 c = 0
-puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{eng}"
 ver.split('.').each { |v|
 puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{v}"
 }
 puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PATCHLEVEL}"
 puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_REVISION}"
+puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{eng}"
 puts "RUBY_VERSINFO[#{(c+=1)-1}]=#{RUBY_PLATFORM}"
 puts "GEM_ROOT=#{gems}"
 EOR
