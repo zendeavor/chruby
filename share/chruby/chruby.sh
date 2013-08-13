@@ -83,7 +83,7 @@ function chruby_set_default {
   chruby_set_env "$sys_rubyroot"
 }
 
-function chrubyauto {
+function chruby_auto {
   typeset ver dir=$PWD stop=${HOME%/*}
   [[ $dir == $stop* ]] || return
   until [[ $dir == $stop ]]; do
@@ -141,10 +141,10 @@ if (($#)); then
   optstring=:acd
   while getopts $optstring o; do
     case $o in
-      a) enable_auto=1;;
-      c) enable_color=1;;
-      d) enable_defaults=1;;
-      r) enable_rubies=1;;
+      a) enable_auto=1 ;;
+      c) enable_color=1 ;;
+      d) enable_defaults=1 ;;
+      r) enable_rubies=1 ;;
     esac
   done
 fi
