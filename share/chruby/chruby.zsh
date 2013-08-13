@@ -9,7 +9,7 @@ function chruby_set_preexec {
     [[ $precmd_functions == *chruby_auto* ]] \
     || [[ $preexec_functions == *chruby_auto* ]]
   }; then
-    chruby_preexec_zsh_set -r
+    chruby_set_preexec -r
   fi
   if [[ -o interactive ]]; then
     precmd_functions+=(chruby_auto)

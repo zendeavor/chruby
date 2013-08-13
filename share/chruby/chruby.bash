@@ -12,7 +12,7 @@ function chruby_set_preexec {
       [[ $PROMPT_COMMAND == *chruby_auto* ]] \
 	|| [[ $trap == *chruby_auto* ]];
   }; then
-    chruby_preexec_bash_set -r
+    chruby_set_preexec -r
   fi
   if [[ $- == *i* ]]; then
     IFS=\; read -ra hook <<<"$PROMPT_COMMAND"
