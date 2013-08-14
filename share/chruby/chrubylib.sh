@@ -21,18 +21,20 @@ function chrubylib_set_color {
 
 # {{{ semi-sanitize paths
 function chrubylib_clean_env_path {
+  typeset ruby_root=${1:+$1/bin} gem_home=${2:+$2/bin} gem_root=${3:+$3/bin}
   PATH=:$PATH:
-  PATH=${PATH//:$RUBY_ROOT\/bin:/:}
-  PATH=${PATH//:$GEM_HOME\/bin:/:}
-  PATH=${PATH//:$GEM_ROOT\/bin:/:}
+  PATH=${PATH//:$ruby_root:/:}
+  PATH=${PATH//:$gem_home:/:}
+  PATH=${PATH//:$gem_root:/:}
   PATH=${PATH#:}
   PATH=${PATH%:}
 }
 
 function chrubylib_clean_env_gempath {
+  typeset gem_home=$1 gem_root=$2
   GEM_PATH=:$GEM_PATH:
-  GEM_PATH=${GEM_PATH//:$GEM_HOME:/:}
-  GEM_PATH=${GEM_PATH//:$GEM_ROOT:/:}
+  GEM_PATH=${GEM_PATH//:$gem_home:/:}
+  GEM_PATH=${GEM_PATH//:$gem_root:/:}
   GEM_PATH=${GEM_PATH#:}
   GEM_PATH=${GEM_PATH%:}
 } # }}}
@@ -40,6 +42,7 @@ function chrubylib_clean_env_gempath {
 # {{{ set some reasonable defaults
 function chrubylib_set_default_rubies {
   typeset dir
+  { setopt local_options null_glob; } 2>/dev/null
   rubies=()
   for dir in "$HOME"/.rubies/*; do
     [[ -e $dir && -x $dir/bin/ruby ]] && rubies+=("$dir")
@@ -68,7 +71,8 @@ function chruby_auto {
 # {{{ the fuzzy matcher; reverse array iterator
 function chrubylib_fuzzy_match {
   typeset match ruby=$1 rb=${#rubies[*]}
-  while ((rb-- >= 0)); do
+  { setopt local_options ksh_arrays; } 2>/dev/null
+  while ((--rb >= 0)); do
     [[ ${rubies[rb]} == *$ruby* ]] && { match=${rubies[rb]}; break; }
   done
   if [[ -n $match ]]; then
@@ -77,25 +81,25 @@ function chrubylib_fuzzy_match {
     printf '%s\n' "No ruby found for '$ruby'" >&2
     return 2
   fi
-}
-# }}}
+} # }}}
 
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
   typeset env new_ruby_root=${1%/bin/*} ruby_opt=${*:2}
-  chrubylib_clean_env_path
-  chrubylib_clean_env_gempath
+  chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "$GEM_ROOT"
+  chrubylib_clean_env_gempath "$GEM_HOME" "$GEM_ROOT"
   RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
   RUBYOPT=${ruby_opt:-$RUBYOPT}
+  { setopt local_options ksh_arrays; } 2>/dev/null
   while IFS= read -r env; do
     export "$env"
-  done < <("$RUBY_ROOT"/bin/ruby - <<\EOR
+  done < <("$RUBY_ROOT"/bin/ruby - <<'EOR'
 begin; require 'rubygems'; rescue LoadError; end
 eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
 gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
 (RUBY_VERSION.split('.') +
 [RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
-).each_with_index { |v, i| puts "RUBY_VERSINFO[#{i+1}]=#{v}" }
+).each_with_index { |v, i| puts "RUBY_VERSINFO[#{i}]=#{v}" }
 puts "GEM_ROOT=#{gems}"
 EOR
 )
