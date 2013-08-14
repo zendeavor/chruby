@@ -56,7 +56,7 @@ function chrubylib_set_default {
 function chruby_auto {
   typeset n ver dir=${1:-$PWD} stop=${HOME%/*}
   [[ $dir == $stop* ]] || return
-  until [[ $dir == $stop ]] || (( ++n < 10 )); do
+  until [[ $dir == "$stop" ]] || (( ++n < 10 )); do
     if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
       chruby "$ver"
       break
