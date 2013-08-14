@@ -49,14 +49,14 @@ function chrubylib_set_default_rubies {
 function chrubylib_set_default {
   sys_ruby_root=$(PATH=/usr/local/bin:/usr/bin:/bin command -v ruby)
   sys_ruby_root=${sys_ruby_root%/bin/*}
-  chrubylib_set_env "$sys_rubyroot"
+  chrubylib_set_env "$sys_ruby_root"
 } # }}}
 
 # {{{ worker for $SHELL_set_preexec functions
 function chruby_auto {
-  typeset ver dir=${1:-$PWD} stop=${HOME%/*}
+  typeset n ver dir=${1:-$PWD} stop=${HOME%/*}
   [[ $dir == $stop* ]] || return
-  until [[ $dir == $stop ]]; do
+  until [[ $dir == $stop ]] || (( ++n < 10 )); do
     if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
       chruby "$ver"
       break
