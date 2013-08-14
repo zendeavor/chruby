@@ -1,6 +1,6 @@
 # the sugar syntax
 function chruby {
-  typeset o match colored optstring=:hV rb=${rubies[*]} ver=0.3.6
+  typeset o colored optstring=:hV ver=0.3.6
 # {{{ uninteresting details
   [[ $1 == --* ]] && set -- "${1#-}" "${@:2}"
   if { getopts $optstring o; } 2>/dev/null; then
@@ -26,16 +26,7 @@ function chruby {
       chrubylib_set_default
     ;;
     *)
-      while ((rb-- >= 0)); do
-	[[ ${rubies[rb]} == *$1* ]] && { match=${rubies[rb]}; break; }
-      done
-      if [[ -n $match ]]; then
-	chrubylib_set_env "$match" "${@:2}"
-      else
-	printf '%s\n' "No ruby found for '$1'" >&2
-	return 2
-      fi
-
+      chrubylib_fuzzy_match "$1"
     ;;
   esac
 }

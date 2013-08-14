@@ -1,4 +1,4 @@
-# {{{1 safely set up some colors or fallback on raw escapes
+# {{{ safely set up some colors or fallback on raw escapes
 function chrubylib_set_color {
   if [[ -t 2 ]]; then
     if tput setaf 0 >/dev/null 2>&1; then
@@ -17,7 +17,7 @@ function chrubylib_set_color {
       chruby_blue="${chruby_bold}\e[1;34m"
     fi
   fi
-} # 1}}}
+} # }}}
 
 # {{{ semi-sanitize paths
 function chrubylib_clean_env_path {
@@ -64,6 +64,21 @@ function chruby_auto {
     dir=${dir%/*}
   done
 } # }}}
+
+# {{{ the fuzzy matcher; reverse array iterator
+function chrubylib_fuzzy_match {
+  typeset match ruby=$1 rb=${#rubies[*]}
+  while ((rb-- >= 0)); do
+    [[ ${rubies[rb]} == *$ruby* ]] && { match=${rubies[rb]}; break; }
+  done
+  if [[ -n $match ]]; then
+    chrubylib_set_env "$match" "${@:2}"
+  else
+    printf '%s\n' "No ruby found for '$ruby'" >&2
+    return 2
+  fi
+}
+# }}}
 
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
