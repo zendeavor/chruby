@@ -58,7 +58,7 @@ function chrubylib_set_default {
 # {{{ worker for $SHELL_set_preexec functions
 function chruby_auto {
   typeset n ver dir=${1:-$PWD} stop=${HOME%/*}
-  [[ $dir == $stop* ]] || return
+  { [[ $dir == $stop* ]] && ((chruby_hook)); } || return
   until [[ $dir == "$stop" ]] || (( ++n < 10 )); do
     if { IFS= read -r ver <"$dir"/.ruby-version; } 2>/dev/null; then
       chruby "$ver"
@@ -125,7 +125,7 @@ fi
 ((enable_defaults)) && chrubylib_set_default
 ((enable_rubies)) && chrubylib_set_default_rubies
 ((enable_color)) && chrubylib_set_color
-((enable_auto)) && chrubylib_set_preexec
+((enable_auto)) && chrubylib_set_hook
 
 unset optstring o enable_auto enable_color enable_defaults enable_rubies
 export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT

@@ -1,4 +1,4 @@
-function chruby_set_preexec {
+function chrubylib_set_hook {
   typeset hook=()
   # {{{ hook removal
   if [[ $1 == -r ]]; then
@@ -12,7 +12,7 @@ function chruby_set_preexec {
     [[ $precmd_functions == *chruby_auto* ]] \
     || [[ $preexec_functions == *chruby_auto* ]]
   }; then
-    chruby_set_preexec -r
+    chrubylib_set_hook -r
   fi
   # }}}
   # {{{ hook addition
