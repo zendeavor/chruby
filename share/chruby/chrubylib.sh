@@ -87,7 +87,7 @@ function chrubylib_fuzzy_match {
 function chrubylib_set_env_rubyversinfo {
     typeset env
     while IFS= read -r env; do
-	export "$env"
+	typeset -g "$env"
     done < <("$RUBY_ROOT"/bin/ruby - <<'EOR'
 begin; require 'rubygems'; rescue LoadError; end
 eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
