@@ -98,7 +98,7 @@ gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
 puts "GEM_ROOT=#{gems}"
 EOR
 )
-}
+} # }}}
 
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
