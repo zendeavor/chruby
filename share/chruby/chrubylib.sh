@@ -2,14 +2,14 @@
 function chrubylib_set_color {
     if [[ -t 2 ]]; then
 	if tput setaf 0 >/dev/null 2>&1; then
-	    chrubycoff=$(tput sgr0)
+	    chruby_coff=$(tput sgr0)
 	    chruby_bold=$(tput bold)
 	    chruby_red=${chruby_bold}$(tput af 1)
 	    chruby_green=${chruby_bold}$(tput af 2)
 	    chruby_yellow=${chruby_bold}$(tput af 3)
 	    chruby_blue=${chruby_bold}$(tput af 4)
 	else
-	    chrubycoff="\e[1;0m"
+	    chruby_coff="\e[1;0m"
 	    chruby_bold="\e[1;1m"
 	    chruby_red="${chruby_bold}\e[1;31m"
 	    chruby_green="${chruby_bold}\e[1;32m"
