@@ -21,32 +21,36 @@ function chrubylib_set_color {
 
 # {{{ semi-sanitize paths
 function chrubylib_clean_env_path {
-    typeset ruby_root=${1:+$1/bin} gem_home=${2:+$2/bin} gem_root=${3:+$3/bin}
+    typeset old path=$PATH
     PATH=:$PATH:
-    PATH=${PATH//:$ruby_root:/:}
-    PATH=${PATH//:$gem_home:/:}
-    PATH=${PATH//:$gem_root:/:}
+    for paths; do
+	PATH=${PATH//:$paths\/bin:/:}
+    done
     PATH=${PATH#:}
     PATH=${PATH%:}
+    [[ $PATH != "$old_path" ]]
 }
 
 function chrubylib_clean_env_gempath {
-    typeset gem_home=$1 gem_root=$2
+    typeset old_gem_path=$GEM_PATH
     GEM_PATH=:$GEM_PATH:
-    GEM_PATH=${GEM_PATH//:$gem_home:/:}
-    GEM_PATH=${GEM_PATH//:$gem_root:/:}
+    for gems; do
+	GEM_PATH=${GEM_PATH//:$gems:/:}
+    done
     GEM_PATH=${GEM_PATH#:}
     GEM_PATH=${GEM_PATH%:}
+    [[ $GEM_PATH != "$old_gem_path" ]]
 } # }}}
 
 # {{{ set some reasonable defaults
 function chrubylib_set_default_rubies {
     typeset dir
-    { setopt local_options null_glob; } 2>/dev/null
+    { setopt local_options null_glob ksh_arrays; } 2>/dev/null
     rubies=()
     for dir in "$HOME"/.rubies/*; do
 	[[ -e $dir && -x $dir/bin/ruby ]] && rubies+=("$dir")
     done
+    [[ -n ${rubies[0]} ]]
 }
 
 function chrubylib_set_default {
@@ -84,37 +88,39 @@ function chrubylib_fuzzy_match {
 } # }}}
 
 # {{{ set up the RUBY_VERSINFO array into the env (like BASH_VERSINFO)
+# as this is an array, it can't *actually* be put in the env
 function chrubylib_set_env_rubyversinfo {
-    typeset env
+    typeset e env old_rubyvers_info=${RUBY_VERSINFO[@]}
+    { setopt local_options ksh_arrays; } 2>/dev/null
     while IFS= read -r env; do
 	typeset -g "$env"
     done < <("$RUBY_ROOT"/bin/ruby - <<'EOR'
 begin; require 'rubygems'; rescue LoadError; end
 eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
+ver = RUBY_VERSION
 gems = defined?(Gem) ? Gem.default_dir : "/usr/lib/#{eng}/gems/#{ver}"
-(RUBY_VERSION.split('.') +
+(ver.split('.') +
 [RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
 ).each_with_index { |v, i| puts "RUBY_VERSINFO[#{i}]=#{v}" }
-puts "GEM_ROOT=#{gems}"
+puts "GEM_HOME=#{gems}"
 EOR
 )
+    [[ ${RUBY_VERSINFO[@]} != "$old_ruby_versinfo" ]] && e=2
+    [[ $GEM_ROOT != "$old_gem_root" ]] && e=${e}3
+    return $e
 } # }}}
 
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
     typeset ruby_engine ruby_version new_ruby_root=${1%/bin/*} ruby_opt=${*:2}
-    chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "$GEM_ROOT"
-    chrubylib_clean_env_gempath "$GEM_HOME" "$GEM_ROOT"
+    chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "$GEM_PATH"
+    chrubylib_clean_env_gempath "$GEM_PATH"
     RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
     RUBYOPT=${ruby_opt:-$RUBYOPT}
     { setopt local_options ksh_arrays; } 2>/dev/null
     chrubylib_set_env_rubyversinfo
-    ruby_engine=${RUBY_VERSINFO[5]}
-    ruby_version=${RUBY_VERSINFO[@]:0:3}
-    ruby_version=${ruby_version// /.}
-    GEM_HOME=$HOME/.gem/$ruby_engine/$ruby_version
-    GEM_PATH=$GEM_HOME${GEM_ROOT:+:$GEM_ROOT}${GEM_PATH:+:$GEM_PATH}
-    PATH=$GEM_HOME/bin${GEM_ROOT:+:$GEM_ROOT/bin}:$RUBY_ROOT/bin:$PATH
+    GEM_PATH=$GEM_PATH${GEM_PATH:+:$GEM_PATH}
+    PATH=$GEM_HOME/bin:$GEM_ROOT/bin:$RUBY_ROOT/bin:$PATH
     hash -r
 } # }}}
 
@@ -137,7 +143,7 @@ fi
 ((enable_auto)) && chrubylib_set_hook
 
 unset optstring o enable_auto enable_color enable_defaults enable_rubies
-export GEM_HOME GEM_PATH GEMSKIP GEM_SKIP RUBY_ROOT RUBYOPT
+export GEM_HOME GEM_PATH GEM_SKIP GEM_CACHE GEMCACHE RUBY_ROOT RUBYOPT
 # }}}
 
 # vim: ft=sh sts=4 sw=4 fdm=marker
