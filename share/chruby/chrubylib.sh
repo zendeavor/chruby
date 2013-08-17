@@ -85,8 +85,7 @@ function chrubylib_set_env_rubyversinfo {
 	typeset -g "$env"
     done < <("$RUBY_ROOT"/bin/ruby - <<'EOR'
 eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
-ver = RUBY_VERSION
-(ver.split('.') + [RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
+(RUBY_VERSION.split('.') + [RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
 ).each_with_index { |v, i| puts "RUBY_VERSINFO[#{i}]=#{v}" }
 EOR
 )
