@@ -26,8 +26,7 @@ function chrubylib_add_hook {
     if [[ $- == *i* ]]; then
 	PROMPT_COMMAND="$hook$func"
     else
-	hook=${hook#+(\;)}
-	hook=${hook:+${hook:-}}
+	hook=${hook#+(\;| )}
 	trap "$hook$func" DEBUG
     fi
 } # }}}
@@ -55,6 +54,6 @@ function chrubylib_set_hook {
 : "${PROMPT_COMMAND:=${PROMPT_COMMAND:-}}"
 shopt -s extglob
 set -T
-# . /etc/profile.d/chruby.sh
+# . /etc/profile.d/chruby.sh "$@"
 
 # vim: ft=sh sts=4 sw=4 fdm=marker

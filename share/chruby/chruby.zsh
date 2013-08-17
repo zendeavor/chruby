@@ -27,6 +27,6 @@ function chrubylib_set_hook {
     # }}}
     # }}}
 }
-. /etc/profile.d/chruby.sh
+# . /etc/profile.d/chruby.sh "$@"
 
 # vim: ft=zsh sts=4 sw=4 fdm=marker

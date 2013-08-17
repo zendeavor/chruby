@@ -78,7 +78,7 @@ function chrubylib_fuzzy_match {
 
 # {{{ set up the RUBY_VERSINFO array into the env (like BASH_VERSINFO)
 # as this is an array, it can't *actually* be put in the env
-function chrubylib_set_env_rubyversinfo {
+function chrubylib_set_env_ruby_versinfo {
     typeset e env old_rubyvers_info=${RUBY_VERSINFO[@]}
     { setopt local_options ksh_arrays; } 2>/dev/null
     while IFS= read -r env; do
@@ -95,11 +95,16 @@ EOR
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
     typeset ruby_engine ruby_version new_ruby_root=${1%/bin/*} ruby_opt=${*:2}
-    chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "$GEM_PATH"
+    { setopt local_options ksh_arrays; } 2>/dev/null
+    typeset gem_path=$GEM_PATH gem_paths=()
+    while [[ $gem_path != "${gem_path[${#gem_path[@]}-1]}" ]]; do
+	gem_paths+=("${gem_path:=${gem_path#*:}}")
+    done
+    chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "${gem_path[@]}"
     RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
     RUBYOPT=${ruby_opt:-$RUBYOPT}
     { setopt local_options ksh_arrays; } 2>/dev/null
-    chrubylib_set_env_rubyversinfo
+    chrubylib_set_env_ruby_versinfo
     PATH=$RUBY_ROOT/bin:$GEM_HOME/bin:$PATH
     hash -r
 } # }}}
