@@ -19,16 +19,40 @@ function chrubylib_set_color {
     fi
 } # }}}
 
-# {{{ semi-sanitize paths
-function chrubylib_clean_env_path {
-    typeset old path=$PATH
-    PATH=:$PATH:
-    for paths; do
-	PATH=${PATH//:$paths\/bin:/:}
+# {{{ split colon-separated list into components
+function chrubylib_split_colon_list {
+    { setopt local_options ksh_arrays; } 2>/dev/null
+    typeset lists elems=() out=()
+    for lists; do
+	elems=("${lists%%:*}")
+	until [[ $lists == "${elems[${#elems[@]}-1]}" ]]; do
+	    lists=${lists#*:}
+	    elems+=("${lists%%:*}")
+	done
+	out+=("${elems[@]}")
     done
-    PATH=${PATH#:}
-    PATH=${PATH%:}
-    [[ $PATH != "$old_path" ]]
+    printf '%s\n' "${out[@]}"
+} # }}}
+
+# {{{ semi-sanitize paths
+function chrubylib_clean_env_paths {
+    typeset list=$1 paths
+    eval "$list=:\$$list:"
+    while IFS= read -r paths; do
+	eval "$list=\${$list//:\$paths\\\/bin:/:}"
+    done < <(chrubylib_split_colon_list "${@:2}")
+    eval "$list=\${list#:}"
+    eval "$list=\${list%:}"
+    eval [[ \$$list != \"$list\" ]]
+} # }}}
+
+# {{{ update a path with new bin dirs
+function chrubylib_set_env_paths {
+    typeset list=$1 paths
+    while IFS= read -r paths; do
+	eval "$list=\$bin/bin:\$$list"
+    done < <(chrubylib_split_colon_list "${@:2}")
+    eval [[ \$$list != \"$list\" ]]
 } # }}}
 
 # {{{ set some reasonable defaults
@@ -76,13 +100,22 @@ function chrubylib_fuzzy_match {
     fi
 } # }}}
 
+# {{{ set up the new ruby info
+function chrubylib_set_ruby_root {
+    typeset e ruby_root=$1 ruby_opt=${1:-${*:2}} old_ruby_root=$RUBY_ROOT old_ruby_opt=$RUBYOPT
+    RUBY_ROOT=${ruby_root:-$sys_ruby_root}
+    RUBYOPT=${ruby_opt:-$RUBYOPT}
+    [[ $RUBY_ROOT != "$old_ruby_root" ]] || e=1
+    [[ $RUBYOPT != "$old_ruby_opt" ]] || e+=2
+    return $e
+} # }}}
+
 # {{{ set up the RUBY_VERSINFO array into the env (like BASH_VERSINFO)
-# as this is an array, it can't *actually* be put in the env
 function chrubylib_set_env_ruby_versinfo {
-    typeset e env old_rubyvers_info=${RUBY_VERSINFO[@]}
+    typeset env old_ruby_versinfo=${RUBY_VERSINFO[@]}
     { setopt local_options ksh_arrays; } 2>/dev/null
     while IFS= read -r env; do
-	typeset -g "$env"
+	eval "$env"
     done < <("$RUBY_ROOT"/bin/ruby - <<'EOR'
 eng = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
 (RUBY_VERSION.split('.') + [RUBY_PATCHLEVEL, RUBY_REVISION, eng, RUBY_PLATFORM]
@@ -95,17 +128,10 @@ EOR
 # {{{ workhorse; sets up the whole environment
 function chrubylib_set_env {
     typeset ruby_engine ruby_version new_ruby_root=${1%/bin/*} ruby_opt=${*:2}
-    { setopt local_options ksh_arrays; } 2>/dev/null
-    typeset gem_path=$GEM_PATH gem_paths=()
-    while [[ $gem_path != "${gem_path[${#gem_path[@]}-1]}" ]]; do
-	gem_paths+=("${gem_path:=${gem_path#*:}}")
-    done
-    chrubylib_clean_env_path "$RUBY_ROOT" "$GEM_HOME" "${gem_path[@]}"
-    RUBY_ROOT=${new_ruby_root:-$sys_ruby_root}
-    RUBYOPT=${ruby_opt:-$RUBYOPT}
-    { setopt local_options ksh_arrays; } 2>/dev/null
-    chrubylib_set_env_ruby_versinfo
-    PATH=$RUBY_ROOT/bin:$GEM_HOME/bin:$PATH
+    chrubylib_clean_env_paths "$RUBY_ROOT" "$GEM_HOME" "$GEM_PATH"
+    chrubylib_set_env_ruby_info "$new_ruby_root" "$ruby_opt"
+    chrubylib_set_env_ruby_versinfo "$new_ruby_root" "$ruby_opt"
+    chrubylib_set_env_paths PATH "$RUBY_ROOT" "$GEM_HOME" "$GEM_PATH"
     hash -r
 } # }}}
 
@@ -122,6 +148,7 @@ if (($#)); then
     done
 fi
 
+RUBY_VERSINFO=()
 ((enable_defaults)) && chrubylib_set_default
 ((enable_rubies)) && chrubylib_set_default_rubies
 ((enable_color)) && chrubylib_set_color
@@ -131,4 +158,4 @@ unset optstring o enable_auto enable_color enable_defaults enable_rubies
 export GEM_HOME GEM_PATH GEM_SKIP GEM_CACHE GEMCACHE RUBY_ROOT RUBYOPT
 # }}}
 
-# vim: ft=sh sts=4 sw=4 fdm=marker
+# vim: ft=sh sts=4 sw=4 et fdm=marker

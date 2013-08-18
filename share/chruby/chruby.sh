@@ -24,7 +24,7 @@ function chruby {
 	    colored=${colored}${chruby_green}$RUBY_ROOT${chruby_coff}
 	    printf '%s\n' "${rubies[@]/#$RUBY_ROOT/$colored}"
 	;;
-	system|default)
+	sys*|def*)
 	    chrubylib_set_default
 	;;
 	*)
