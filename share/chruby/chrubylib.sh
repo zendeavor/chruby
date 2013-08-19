@@ -43,7 +43,7 @@ function chrubylib_clean_env_paths {
     done < <(chrubylib_split_colon_list "${@:3}")
     eval "$list=\${list#:}"
     eval "$list=\${list%:}"
-    eval [[ \$"$list" != \"$list\" ]]
+    eval [[ "\$$list" != \"$list\" ]]
 } # }}}
 
 # {{{ update a path with new bin dirs
@@ -52,7 +52,7 @@ function chrubylib_set_env_paths {
     while IFS= read -r paths; do
         eval "$list=\$paths\$tail:\$$list"
     done < <(chrubylib_split_colon_list "${@:3}")
-    eval [[ \$"$list" != \"$list\" ]]
+    eval [[ "\$$list" != \"$list\" ]]
 } # }}}
 
 # {{{ the fuzzy matcher; reverse array iterator
